@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Trading Journal Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0f172a 0, #020617 45%, #000 100%);
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif;
+    }
+    .focus-text {
+      letter-spacing: 0.01em;
+    }
+    .pill-btn {
+      border-radius: 9999px;
+      border: 1px solid rgba(63, 63, 70, 0.9);
+      padding: 0.25rem 0.85rem;
+      background-color: rgba(9, 9, 11, 0.9);
+      color: rgba(244, 244, 245, 0.9);
+      transition: all 0.15s ease-out;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.68rem;
+    }
+    .pill-btn:hover {
+      border-color: rgba(52, 211, 153, 0.8);
+      color: rgba(167, 243, 208, 1);
+      box-shadow: 0 0 12px rgba(52, 211, 153, 0.6);
+      background-color: rgba(9, 9, 11, 1);
+    }
+    .tag-pill {
+      border-radius: 9999px;
+      border: 1px solid rgba(63, 63, 70, 0.9);
+      padding: 0.25rem 0.8rem;
+      background-color: rgba(9, 9, 11, 0.9);
+      color: rgba(244, 244, 245, 0.85);
+      transition: all 0.15s ease-out;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.68rem;
+    }
+    .tag-pill:hover {
+      border-color: rgba(52, 211, 153, 0.8);
+      color: rgba(167, 243, 208, 1);
+      box-shadow: 0 0 12px rgba(52, 211, 153, 0.6);
+      background-color: rgba(9, 9, 11, 1);
+    }
+    .tag-pill.active-tag {
+      border-color: rgba(52, 211, 153, 1);
+      background-color: rgba(5, 46, 22, 0.7);
+      color: rgba(240, 253, 250, 1);
+      box-shadow: 0 0 16px rgba(52, 211, 153, 0.9);
+    }
+    .ledger-tab.active-ledger {
+      color: #020617;
+      background-color: rgb(52 211 153);
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.8), 0 12px 30px rgba(16, 185, 129, 0.6);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Hidden fields for current session -->
+  <input type="hidden" id="session_id" value="" />
+  <input type="hidden" id="session_payload" name="session_payload" />
+  <input type="hidden" id="session_date" value="" />
+
+  <!-- Session Analytics -->
+  <section class="max-w-5xl mx-auto mt-6 px-4">
+    <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
+          Last 30 Sessions · Snapshot
+        </h2>
+        <span id="analytics_updated" class="text-[10px] text-zinc-500">
+          Loading…
+        </span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 text-[11px]">
+        <div>
+          <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
+            Avg R / Trade
+          </div>
+          <div id="stat_avg_r" class="text-sm text-zinc-100">
+            —
+          </div>
+        </div>
+
+        <div>
+          <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
+            FOMO Sessions
+          </div>
+          <div id="stat_fomo_rate" class="text-sm text-zinc-100">
+            —
+          </div>
+          <div id="stat_fomo_r" class="text-[10px] text-zinc-500">
+            —
+          </div>
+        </div>
+
+        <div>
+          <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
+            Top Strategy (R)
+          </div>
+          <div id="stat_top_strategy" class="text-sm text-zinc-100">
+            —
+          </div>
+          <div id="stat_top_strategy_r" class="text-[10px] text-zinc-500">
+            —
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Session List -->
+  <section class="max-w-5xl mx-auto mt-6 mb-4 px-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
+        Sessions
+      </h2>
+      <div class="flex gap-2 text-[11px]">
+        <select id="filter_fomo" class="bg-transparent border border-zinc-700/80 rounded-full px-2 py-1 text-zinc-200">
+          <option value="">FOMO Filter</option>
+          <option value="with">With FOMO</option>
+          <option value="without">Without FOMO</option>
+        </select>
+        <select id="filter_strategy" class="bg-transparent border border-zinc-700/80 rounded-full px-2 py-1 text-zinc-200">
+          <option value="">All Strategies</option>
+          <option value="iron_condor">Iron Condor</option>
+          <option value="momentum">Momentum</option>
+          <option value="mean_reversion">Mean Reversion</option>
+          <option value="trend_follow">Trend Follow</option>
+        </select>
+      </div>
+    </div>
+    <div id="session_list" class="space-y-2 text-[11px]">
+      <!-- populated by JS -->
+    </div>
+  </section>
+
+  <!-- Ledgered Trading Journal -->
+  <section class="max-w-5xl mx-auto mt-6 mb-16 px-4">
+
+    <!-- Ledger strip -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="inline-flex rounded-full bg-[#050509] border border-zinc-800/80 p-1 shadow-[0_0_0_1px_rgba(15,23,42,0.9),0_18px_40px_rgba(0,0,0,0.9)]">
+        <button
+          type="button"
+          data-ledger="psychology"
+          class="ledger-tab active-ledger inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-black"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-black/70"></span>
+          Psychology
+        </button>
+
+        <button
+          type="button"
+          data-ledger="trade"
+          class="ledger-tab inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-zinc-700"></span>
+          Trade
+        </button>
+
+        <button
+          type="button"
+          data-ledger="market"
+          class="ledger-tab inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-zinc-700"></span>
+          Market Tape
+        </button>
+      </div>
+
+      <div class="text-right text-[11px] text-zinc-500">
+        <div class="uppercase tracking-[0.18em]">Session</div>
+        <div class="mt-0.5 text-xs text-zinc-300" id="session_date_display">—</div>
+      </div>
+    </div>
+
+    <!-- Ledger content -->
+    <div class="space-y-0">
+
+      <!-- PSYCHOLOGY LEDGER -->
+      <section id="ledger-psychology" class="ledger-panel">
+        <header class="mb-4">
+          <p class="text-[11px] uppercase tracking-[0.22em] text-emerald-400/90 mb-1">
+            Psychology Ledger
+          </p>
+          <h2 class="text-lg font-semibold text-zinc-50">
+            How are you showing up to the tape today?
+          </h2>
+          <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
+            This book is about your internal state: energy, emotions, and risk tolerance.
+          </p>
+        </header>
+
+        <!-- Mind State Tags BEFORE -->
+        <div class="mb-4" data-scope="psych-before">
+          <p class="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90 mb-1">
+            Mind State Tags · Before
+          </p>
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            <button class="tag-pill" data-tag="calm">Calm</button>
+            <button class="tag-pill" data-tag="focused">Focused</button>
+            <button class="tag-pill" data-tag="confident">Confident</button>
+            <button class="tag-pill" data-tag="uncertain">Uncertain</button>
+            <button class="tag-pill" data-tag="anxious">Anxious</button>
+            <button class="tag-pill" data-tag="fear">Fear</button>
+            <button class="tag-pill" data-tag="fomo">FOMO</button>
+            <button class="tag-pill" data-tag="greed">Greed</button>
+            <button class="tag-pill" data-tag="revenge">Revenge Trading</button>
+            <button class="tag-pill" data-tag="tilt">Tilt</button>
+            <button class="tag-pill" data-tag="boredom">Boredom</button>
+            <button class="tag-pill" data-tag="overconfidence">Overconfidence</button>
+            <button class="tag-pill" data-tag="hesitation">Hesitation</button>
+            <button class="tag-pill" data-tag="impatience">Impatience</button>
+            <button class="tag-pill" data-tag="disciplined">Disciplined</button>
+            <button class="tag-pill" data-tag="distracted">Distracted</button>
+            <button class="tag-pill" data-tag="burnout">Burnout</button>
+          </div>
+        </div>
+
+        <!-- Before-trade -->
+        <div class="mb-6 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+          <div class="mb-2 flex items-center justify-between">
+            <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em]">
+              <span class="h-1.5 w-6 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)]"></span>
+              <span class="text-emerald-300">
+                Reason: State before risk
+              </span>
+            </div>
+            <span class="text-[10px] text-zinc-500">
+              2–5 sentences · honest, not polished
+            </span>
+          </div>
+          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+            Before-Trade Check-In
+          </h3>
+          <textarea
+            id="psych_before"
+            rows="6"
+            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+            placeholder="Example: Slept 5.5h, slight frustration from yesterday. Notice urge to push size if first trade works."
+          ></textarea>
+        </div>
+
+        <!-- Mind State Tags AFTER -->
+        <div class="mb-4" data-scope="psych-after">
+          <p class="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90 mb-1">
+            Mind State Tags · After
+          </p>
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            <button class="tag-pill" data-tag="calm">Calm</button>
+            <button class="tag-pill" data-tag="tired">Tired</button>
+            <button class="tag-pill" data-tag="disciplined">Disciplined</button>
+            <button class="tag-pill" data-tag="regret">Regret</button>
+            <button class="tag-pill" data-tag="relief">Relief</button>
+            <button class="tag-pill" data-tag="tilt">Tilt</button>
+            <button class="tag-pill" data-tag="burnout">Burnout</button>
+            <button class="tag-pill" data-tag="satisfied">Satisfied</button>
+          </div>
+        </div>
+
+        <!-- After-trade -->
+        <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+            After-Trade Decompression
+          </h3>
+          <textarea
+            id="psych_after"
+            rows="6"
+            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+            placeholder="Example: Took 3 trades, followed plan on entries. Tilt tried to show up after second loss but size stayed standard."
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- TRADE LEDGER -->
+      <section id="ledger-trade" class="ledger-panel hidden">
+        <header class="mb-4">
+          <p class="text-[11px] uppercase tracking-[0.22em] text-sky-400/90 mb-1">
+            Trade Ledger
+          </p>
+          <h2 class="text-lg font-semibold text-zinc-50">
+            Structure and execution of the actual trades.
+          </h2>
+          <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
+            This book is about what you actually put on: strategy, structure, sizing, execution.
+          </p>
+        </header>
+
+        <!-- Time Horizon -->
+        <div class="mb-3" data-scope="trade-horizon">
+          <p class="text-[11px] uppercase tracking-[0.18em] text-sky-300/90 mb-1">
+            Time Horizon
+          </p>
+          <div class="flex flex-wrap gap-2 text-[11px]">
+            <button class="tag-pill" data-tag="long_term">Long-Term Investment (6m+)</button>
+            <button class="tag-pill" data-tag="swing">Swing (days–weeks)</button>
+            <button class="tag-pill" data-tag="short_term">Short-Term (1–5 days)</button>
+            <button class="tag-pill" data-tag="day_trade">Day Trade (intraday)</button>
+            <button class="tag-pill" data-tag="scalp">Scalp (minutes)</button>
+          </div>
+        </div>
+
+        <!-- Strategy & Setup -->
+        <div class="mb-4 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-3" data-scope="trade-strategy">
+          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+            Strategy & Setup
+          </h3>
+          <div class="flex flex-wrap gap-2 text-[11px] mb-1">
+            <!-- Options structures -->
+            <button class="pill-btn" data-tag="iron_condor">Iron Condor</button>
+            <button class="pill-btn" data-tag="vertical_credit">Vertical Credit Spread</button>
+            <button class="pill-btn" data-tag="vertical_debit">Vertical Debit Spread</button>
+            <button class="pill-btn" data-tag="straddle">Straddle</button>
+            <button class="pill-btn" data-tag="strangle">Strangle</button>
+            <button class="pill-btn" data-tag="covered_call">Covered Call</button>
+            <button class="pill-btn" data-tag="cash_secured_put">Cash-Secured Put</button>
+
+            <!-- Directional styles -->
+            <button class="pill-btn" data-tag="momentum">Momentum</button>
+            <button class="pill-btn" data-tag="mean_reversion">Mean Reversion</button>
+            <button class="pill-btn" data-tag="breakout">Breakout</button>
+            <button class="pill-btn" data-tag="breakdown">Breakdown</button>
+            <button class="pill-btn" data-tag="range_trade">Range Trade</button>
+            <button class="pill-btn" data-tag="trend_follow">Trend Follow</button>
+
+            <!-- Context -->
+            <button class="pill-btn" data-tag="event_driven">Event-Driven</button>
+            <button class="pill-btn" data-tag="hedge">Hedge / Protection</button>
+            <button class="pill-btn" data-tag="liquidity_probe">Liquidity Probe</button>
+          </div>
+        </div>
+
+        <!-- Global trade plan -->
+        <div class="mb-4 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+            Global Plan for This Session
+          </h3>
+          <textarea
+            id="trade_global_plan"
+            rows="4"
+            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+            placeholder="Example: Focus on 0DTE SPX iron condors around key levels, no more than 3 trades, no size escalation after wins."
+          ></textarea>
+        </div>
+
+        <!-- Trade narrative (single trade for now) -->
+        <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+          <div class="mb-2 flex items-center justify-between">
+            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
+              Trade Narrative (First Trade)
+            </h3>
+            <div class="flex items-center gap-2 text-[11px]">
+              <span class="text-zinc-500 uppercase tracking-[0.16em]">Mode</span>
+              <select
+                id="trade_mode"
+                class="focus-text bg-transparent border border-zinc-700/80 rounded-full px-3 py-1 text-[11px] text-zinc-200 outline-none"
+              >
+                <option value="plan" class="bg-[#050509]">Plan</option>
+                <option value="live" class="bg-[#050509]">Live Notes</option>
+                <option value="postmortem" class="bg-[#050509]">Post-Mortem</option>
+              </select>
+            </div>
+          </div>
+          <textarea
+            id="trade_narrative"
+            rows="9"
+            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+            placeholder="If in Plan: What are you trying to express, where is invalidation, what must be true? If Post-Mortem: What actually happened, what broke, what will you change?"
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- MARKET LEDGER -->
+      <section id="ledger-market" class="ledger-panel hidden">
+        <header class="mb-4">
+          <p class="text-[11px] uppercase tracking-[0.22em] text-amber-400/90 mb-1">
+            Market Ledger
+          </p>
+          <h2 class="text-lg font-semibold text-zinc-50">
+            What the tape, news, and levels are telling you.
+          </h2>
+          <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
+            AI summarizes the environment; you mark what you actually saw.
+          </p>
+        </header>
+
+        <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-3">
+            AI Market Summary · Select What You Actually Saw
+          </h3>
+
+          <!-- Open -->
+          <div class="mb-4 pb-4 border-b border-zinc-800/80" data-scope="market-open">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
+                Open
+              </span>
+              <span class="text-[10px] text-zinc-500">
+                Generated · 09:35 ET
+              </span>
+            </div>
+            <p id="ai_open" class="text-xs text-zinc-300/90 mb-2">
+              Futures opened +0.4% on strong tech, breadth positive across S&P sectors, VIX lower, no major macro releases.
+            </p>
+            <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+              <button class="tag-pill" data-tag="noticed">I noticed this</button>
+              <button class="tag-pill" data-tag="missed">I did not notice this</button>
+              <button class="tag-pill" data-tag="surprised">This surprised me</button>
+            </div>
+            <textarea
+              id="market_open_note"
+              rows="2"
+              class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
+              placeholder="Optional: How did the open feel from your seat?"
+            ></textarea>
+          </div>
+
+          <!-- Midday -->
+          <div class="mb-4 pb-4 border-b border-zinc-800/80" data-scope="market-midday">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
+                Midday
+              </span>
+              <span class="text-[10px] text-zinc-500">
+                Generated · 12:15 ET
+              </span>
+            </div>
+            <p id="ai_midday" class="text-xs text-zinc-300/90 mb-2">
+              Indices consolidated near highs with declining intraday volume, financials lagging, mega-cap tech leading.
+            </p>
+            <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+              <button class="tag-pill" data-tag="noticed">I noticed this</button>
+              <button class="tag-pill" data-tag="missed">I did not notice this</button>
+              <button class="tag-pill" data-tag="surprised">This surprised me</button>
+            </div>
+            <textarea
+              id="market_midday_note"
+              rows="2"
+              class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
+              placeholder="Optional: Did the midday drift change your plan?"
+            ></textarea>
+          </div>
+
+          <!-- Close -->
+          <div data-scope="market-close">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
+                Close
+              </span>
+              <span class="text-[10px] text-zinc-500">
+                Generated · 16:05 ET
+              </span>
+            </div>
+            <p id="ai_close" class="text-xs text-zinc-300/90 mb-2">
+              Market closed near session highs with strong breadth, small caps catching up into the close, IV at lows.
+            </p>
+            <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+              <button class="tag-pill" data-tag="noticed">I noticed this</button>
+              <button class="tag-pill" data-tag="missed">I did not notice this</button>
+              <button class="tag-pill" data-tag="surprised">This surprised me</button>
+            </div>
+            <textarea
+              id="market_close_note"
+              rows="2"
+              class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
+              placeholder="Optional: How did you interpret the close?"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Save footer -->
+    <footer class="mt-8 flex items-center justify-between">
+      <span id="save_status" class="text-[11px] text-zinc-500">
+        Not saved
+      </span>
+      <button
+        id="save_session_btn"
+        class="px-6 py-2 rounded-full bg-emerald-400 text-black text-[11px] font-semibold uppercase tracking-[0.18em] hover:bg-emerald-300 transition-colors duration-150"
+      >
+        Save Session
+      </button>
+    </footer>
+  </section>
+
+  <script>
+    const API_BASE = "http://localhost:4000";
+    const TRADER_ID = "user_123";
+
+    // Ledger tab switching
+    const tabs = document.querySelectorAll(".ledger-tab");
+    const panels = document.querySelectorAll(".ledger-panel");
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const target = tab.getAttribute("data-ledger");
+
+        tabs.forEach(t => t.classList.remove("active-ledger"));
+        tab.classList.add("active-ledger");
+
+        panels.forEach(panel => {
+          if (panel.id === `ledger-${target}`) {
+            panel.classList.remove("hidden");
+          } else {
+            panel.classList.add("hidden");
+          }
+        });
+      });
+    });
+
+    // Tag pill toggle
+    document.querySelectorAll(".tag-pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        pill.classList.toggle("active-tag");
+      });
+    });
+
+    // Generate default sessionId/date
+    function initSessionMeta() {
+      const today = new Date().toISOString().slice(0, 10);
+      const sessionIdField = document.getElementById("session_id");
+      const sessionDateField = document.getElementById("session_date");
+      const display = document.getElementById("session_date_display");
+
+      if (!sessionIdField.value) {
+        sessionIdField.value = `${today}-RTH`;
+      }
+      sessionDateField.value = today;
+      display.textContent = `${today} · RTH`;
+    }
+
+    function getActiveTags(scopeSelector) {
+      const scope = document.querySelector(scopeSelector);
+      if (!scope) return [];
+      const pills = scope.querySelectorAll(".tag-pill, .pill-btn");
+      const tags = [];
+      pills.forEach(p => {
+        if (p.classList.contains("active-tag")) {
+          if (p.dataset.tag) tags.push(p.dataset.tag);
+        }
+      });
+      return tags;
+    }
+
+    function buildSessionPayload() {
+      const sessionId = document.getElementById("session_id").value;
+      const date = document.getElementById("session_date").value;
+
+      const psychBeforeTags = getActiveTags('[data-scope="psych-before"]');
+      const psychAfterTags = getActiveTags('[data-scope="psych-after"]');
+
+      const tradeHorizonTags = getActiveTags('[data-scope="trade-horizon"]');
+      const tradeStrategyTags = getActiveTags('[data-scope="trade-strategy"]');
+
+      const marketOpenFlags = getActiveTags('[data-scope="market-open"]');
+      const marketMidFlags = getActiveTags('[data-scope="market-midday"]');
+      const marketCloseFlags = getActiveTags('[data-scope="market-close"]');
+
+      const payload = {
+        session_id: sessionId,
+        trader_id: TRADER_ID,
+        date: date,
+        session_type: "RTH",
+        psychology_ledger: {
+          mind_state_tags_before: psychBeforeTags,
+          before_trade_note: document.getElementById("psych_before").value,
+          mind_state_tags_after: psychAfterTags,
+          after_trade_note: document.getElementById("psych_after").value
+        },
+        trade_ledger: {
+          time_horizon_tags: tradeHorizonTags,
+          strategy_tags: tradeStrategyTags,
+          global_plan_note: document.getElementById("trade_global_plan").value,
+          trades: [
+            {
+              trade_id: "T-001",
+              symbol: "SPX",
+              time_horizon: tradeHorizonTags[0] || null,
+              strategy: tradeStrategyTags,
+              instrument_type: "index_options",
+              mode: document.getElementById("trade_mode").value,
+              plan_note: document.getElementById("trade_narrative").value,
+              live_note: null,
+              postmortem_note: null,
+              outcome: {
+                pnl: null,
+                r_multiple: null,
+                grade_1_to_10: null,
+                tagged_errors: []
+              }
+            }
+          ]
+        },
+        market_ledger: {
+          ai_summaries: {
+            open: {
+              text: document.getElementById("ai_open").textContent,
+              source: "stub_ai",
+              generated_at: null
+            },
+            midday: {
+              text: document.getElementById("ai_midday").textContent,
+              source: "stub_ai",
+              generated_at: null
+            },
+            close: {
+              text: document.getElementById("ai_close").textContent,
+              source: "stub_ai",
+              generated_at: null
+            }
+          },
+          perception: {
+            open: {
+              flags: marketOpenFlags,
+              note: document.getElementById("market_open_note").value
+            },
+            midday: {
+              flags: marketMidFlags,
+              note: document.getElementById("market_midday_note").value
+            },
+            close: {
+              flags: marketCloseFlags,
+              note: document.getElementById("market_close_note").value
+            }
+          }
+        }
+      };
+
+      document.getElementById("session_payload").value = JSON.stringify(payload);
+      return payload;
+    }
+
+    // Save session
+    document.getElementById("save_session_btn").addEventListener("click", async () => {
+      const status = document.getElementById("save_status");
+      status.textContent = "Saving…";
+      const payload = buildSessionPayload();
+
+      try {
+        const res = await fetch(`${API_BASE}/journal/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("Failed");
+        const saved = await res.json();
+        document.getElementById("session_id").value = saved.session_id;
+        status.textContent = "Saved";
+        await refreshSessions();
+        await refreshAnalytics();
+      } catch (e) {
+        status.textContent = "Error saving";
+      }
+    });
+
+    // Sessions list + filters + analytics
+    async function fetchSessions() {
+      const res = await fetch(`${API_BASE}/journal/sessions?trader_id=${TRADER_ID}`);
+      return await res.json();
+    }
+
+    function sessionHasFomo(psych) {
+      if (!psych) return false;
+      const before = psych.mind_state_tags_before || [];
+      const after = psych.mind_state_tags_after || [];
+      const tags = [...before, ...after].map(t => t.toLowerCase());
+      return tags.some(t => t.includes("fomo"));
+    }
+
+    function hasStrategy(trade_ledger, strategy) {
+      if (!trade_ledger) return false;
+      const dayTags = (trade_ledger.strategy_tags || []).map(t => t.toLowerCase());
+      if (dayTags.includes(strategy.toLowerCase())) return true;
+      const trades = trade_ledger.trades || [];
+      for (const t of trades) {
+        const strat = (t.strategy || []).map(s => s.toLowerCase());
+        if (strat.includes(strategy.toLowerCase())) return true;
+      }
+      return false;
+    }
+
+    function renderSessions(sessions) {
+      const listEl = document.getElementById("session_list");
+      listEl.innerHTML = "";
+
+      sessions.forEach(sess => {
+        const fomo = sessionHasFomo(sess.psychology_ledger);
+        const tradeSummary = sess.trade_ledger?.summary_line || "No trade summary";
+        const psychSummary = sess.psychology_ledger?.summary_line || "No psych summary";
+
+        const div = document.createElement("button");
+        div.type = "button";
+        div.className =
+          "w-full flex justify-between items-center rounded-2xl border border-zinc-800/80 bg-[#050509] px-3 py-2 text-left hover:border-emerald-400/70 hover:bg-zinc-900/80 transition-colors";
+        div.innerHTML = `
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+              ${sess.date} · ${sess.session_type || "RTH"}
+            </div>
+            <div class="mt-1 text-[11px] text-zinc-300 line-clamp-1">
+              ${tradeSummary}
+            </div>
+            <div class="mt-1 text-[11px] text-zinc-500 line-clamp-1">
+              ${psychSummary}
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <span class="text-[10px] uppercase tracking-[0.18em] ${
+              fomo ? "text-rose-400" : "text-zinc-600"
+            }">
+              ${fomo ? "FOMO TAGGED" : "NO FOMO"}
+            </span>
+          </div>
+        `;
+        div.addEventListener("click", () => loadSessionIntoUI(sess));
+        listEl.appendChild(div);
+      });
+    }
+
+    async function refreshSessions() {
+      const all = await fetchSessions();
+      const fomoFilter = document.getElementById("filter_fomo").value;
+      const strategyFilter = document.getElementById("filter_strategy").value;
+
+      let filtered = all;
+      if (fomoFilter === "with") {
+        filtered = filtered.filter(s => sessionHasFomo(s.psychology_ledger));
+      } else if (fomoFilter === "without") {
+        filtered = filtered.filter(s => !sessionHasFomo(s.psychology_ledger));
+      }
+      if (strategyFilter) {
+        filtered = filtered.filter(s => hasStrategy(s.trade_ledger, strategyFilter));
+      }
+      renderSessions(filtered);
+    }
+
+    document.getElementById("filter_fomo").addEventListener("change", refreshSessions);
+    document.getElementById("filter_strategy").addEventListener("change", refreshSessions);
+
+    function setActiveTags(scopeSelector, tags) {
+      const scope = document.querySelector(scopeSelector);
+      if (!scope) return;
+      const pills = scope.querySelectorAll(".tag-pill, .pill-btn");
+      pills.forEach(p => {
+        const tag = p.dataset.tag;
+        if (tag && tags.includes(tag)) {
+          p.classList.add("active-tag");
+        } else {
+          p.classList.remove("active-tag");
+        }
+      });
+    }
+
+    function loadSessionIntoUI(sess) {
+      document.getElementById("session_id").value = sess.session_id;
+      document.getElementById("session_date").value = sess.date;
+      document.getElementById("session_date_display").textContent = `${sess.date} · ${sess.session_type || "RTH"}`;
+
+      const psych = sess.psychology_ledger || {};
+      document.getElementById("psych_before").value = psych.before_trade_note || "";
+      document.getElementById("psych_after").value = psych.after_trade_note || "";
+      setActiveTags('[data-scope="psych-before"]', psych.mind_state_tags_before || []);
+      setActiveTags('[data-scope="psych-after"]', psych.mind_state_tags_after || []);
+
+      const trade = sess.trade_ledger || {};
+      document.getElementById("trade_global_plan").value = trade.global_plan_note || "";
+      setActiveTags('[data-scope="trade-horizon"]', trade.time_horizon_tags || []);
+      setActiveTags('[data-scope="trade-strategy"]', trade.strategy_tags || []);
+
+      const trades = trade.trades || [];
+      if (trades.length > 0) {
+        const t = trades[0];
+        document.getElementById("trade_mode").value = t.mode || "plan";
+        document.getElementById("trade_narrative").value = t.plan_note || t.postmortem_note || "";
+      }
+
+      const market = sess.market_ledger || {};
+      const perception = market.perception || {};
+      const open = perception.open || {};
+      const midday = perception.midday || {};
+      const close = perception.close || {};
+      document.getElementById("market_open_note").value = open.note || "";
+      document.getElementById("market_midday_note").value = midday.note || "";
+      document.getElementById("market_close_note").value = close.note || "";
+      setActiveTags('[data-scope="market-open"]', open.flags || []);
+      setActiveTags('[data-scope="market-midday"]', midday.flags || []);
+      setActiveTags('[data-scope="market-close"]', close.flags || []);
+    }
+
+    function collectTradesForAnalytics(sessions) {
+      const trades = [];
+      sessions.forEach(sess => {
+        const tradeLedger = sess.trade_ledger || {};
+        (tradeLedger.trades || []).forEach(t => {
+          trades.push({
+            session_id: sess.session_id,
+            date: sess.date,
+            hadFomo: sessionHasFomo(sess.psychology_ledger),
+            strategy: (t.strategy || []).map(s => s.toLowerCase()),
+            r_multiple: t.outcome?.r_multiple ?? null,
+          });
+        });
+      });
+      return trades;
+    }
+
+    function computeAnalytics(sessions) {
+      const trades = collectTradesForAnalytics(sessions).filter(t => t.r_multiple !== null);
+      if (!trades.length) {
+        return {
+          avgR: null,
+          fomoRate: null,
+          avgRWithFomo: null,
+          avgRWithoutFomo: null,
+          topStrategy: null,
+          topStrategyAvgR: null
+        };
+      }
+      const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+      const allR = trades.map(t => t.r_multiple);
+      const avgR = avg(allR);
+
+      const withFomo = trades.filter(t => t.hadFomo);
+      const withoutFomo = trades.filter(t => !t.hadFomo);
+      const fomoSessionsSet = new Set(
+        sessions.filter(s => sessionHasFomo(s.psychology_ledger)).map(s => s.session_id)
+      );
+      const fomoRate = sessions.length ? (fomoSessionsSet.size / sessions.length) : null;
+
+      const avgRWithFomo = withFomo.length ? avg(withFomo.map(t => t.r_multiple)) : null;
+      const avgRWithoutFomo = withoutFomo.length ? avg(withoutFomo.map(t => t.r_multiple)) : null;
+
+      const stratMap = new Map();
+      trades.forEach(t => {
+        (t.strategy || []).forEach(s => {
+          if (!s) return;
+          if (!stratMap.has(s)) {
+            stratMap.set(s, { sum: 0, count: 0 });
+          }
+          const entry = stratMap.get(s);
+          entry.sum += t.r_multiple;
+          entry.count += 1;
+        });
+      });
+
+      let topStrategy = null;
+      let topStrategyAvgR = null;
+      stratMap.forEach((val, key) => {
+        const mean = val.sum / (val.count || 1);
+        if (topStrategyAvgR === null || mean > topStrategyAvgR) {
+          topStrategy = key;
+          topStrategyAvgR = mean;
+        }
+      });
+
+      return {
+        avgR,
+        fomoRate,
+        avgRWithFomo,
+        avgRWithoutFomo,
+        topStrategy,
+        topStrategyAvgR
+      };
+    }
+
+    function fmtPct(x) {
+      if (x === null || x === undefined) return "—";
+      return (x * 100).toFixed(0) + "%";
+    }
+
+    function fmtR(x) {
+      if (x === null || x === undefined) return "—";
+      return x.toFixed(2) + " R";
+    }
+
+    async function fetchRecentSessions(limit = 30) {
+      const res = await fetch(`${API_BASE}/journal/sessions?trader_id=${TRADER_ID}`);
+      const all = await res.json();
+      all.sort((a, b) => (a.date < b.date ? 1 : -1));
+      return all.slice(0, limit);
+    }
+
+    async function refreshAnalytics() {
+      const elAvgR = document.getElementById("stat_avg_r");
+      const elFomoRate = document.getElementById("stat_fomo_rate");
+      const elFomoR = document.getElementById("stat_fomo_r");
+      const elTopStrat = document.getElementById("stat_top_strategy");
+      const elTopStratR = document.getElementById("stat_top_strategy_r");
+      const elUpdated = document.getElementById("analytics_updated");
+
+      try {
+        const sessions = await fetchRecentSessions(30);
+        const stats = computeAnalytics(sessions);
+        elAvgR.textContent = fmtR(stats.avgR);
+        if (stats.fomoRate !== null) {
+          elFomoRate.textContent = fmtPct(stats.fomoRate);
+          elFomoR.textContent = `With FOMO: ${fmtR(stats.avgRWithFomo)} · Without: ${fmtR(stats.avgRWithoutFomo)}`;
+        } else {
+          elFomoRate.textContent = "—";
+          elFomoR.textContent = "Not enough data";
+        }
+        elTopStrat.textContent = stats.topStrategy ? stats.topStrategy.replace(/_/g, " ") : "—";
+        elTopStratR.textContent = stats.topStrategyAvgR !== null ? `Avg: ${fmtR(stats.topStrategyAvgR)}` : "—";
+        elUpdated.textContent = "Updated just now";
+      } catch (e) {
+        elUpdated.textContent = "Error loading analytics";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      initSessionMeta();
+      await refreshSessions();
+      await refreshAnalytics();
+    });
+  </script>
+</body>
+</html>
