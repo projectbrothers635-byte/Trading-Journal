@@ -8,8 +8,9 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": false,
     "exactOptionalPropertyTypes": false,
-    "sourceMap": true,
-    "outDir": "./dist"
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "sourceMap": true
   },
   "include": ["src/**/*"]
 }
