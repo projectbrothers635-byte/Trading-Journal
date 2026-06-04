@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <title>Trading Journal Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
       background: radial-gradient(circle at top left, #0f172a 0, #020617 45%, #000 100%);
       color: #e5e7eb;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif;
+      font-size: 14px;
     }
     .focus-text {
       letter-spacing: 0.01em;
@@ -16,7 +18,7 @@
     .pill-btn {
       border-radius: 9999px;
       border: 1px solid rgba(63, 63, 70, 0.9);
-      padding: 0.25rem 0.85rem;
+      padding: 0.35rem 1rem;
       background-color: rgba(9, 9, 11, 0.9);
       color: rgba(244, 244, 245, 0.9);
       transition: all 0.15s ease-out;
@@ -33,7 +35,7 @@
     .tag-pill {
       border-radius: 9999px;
       border: 1px solid rgba(63, 63, 70, 0.9);
-      padding: 0.25rem 0.8rem;
+      padding: 0.35rem 1rem;
       background-color: rgba(9, 9, 11, 0.9);
       color: rgba(244, 244, 245, 0.85);
       transition: all 0.15s ease-out;
@@ -62,438 +64,457 @@
 </head>
 <body class="min-h-screen">
 
+  <!-- App header -->
+  <header class="border-b border-zinc-800/80 bg-black/40 backdrop-blur z-10">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="h-6 w-6 rounded-full bg-emerald-400/90 shadow-[0_0_16px_rgba(52,211,153,0.8)]"></div>
+        <div class="text-sm font-semibold tracking-[0.18em] uppercase text-zinc-200">
+          Trading Journal
+        </div>
+      </div>
+      <div class="text-[11px] text-zinc-500 uppercase tracking-[0.18em]">
+        v0.1 · Personal
+      </div>
+    </div>
+  </header>
+
   <!-- Hidden fields for current session -->
   <input type="hidden" id="session_id" value="" />
   <input type="hidden" id="session_payload" name="session_payload" />
   <input type="hidden" id="session_date" value="" />
 
-  <!-- Session Analytics -->
-  <section class="max-w-5xl mx-auto mt-6 px-4">
-    <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
-          Last 30 Sessions · Snapshot
-        </h2>
-        <span id="analytics_updated" class="text-[10px] text-zinc-500">
-          Loading…
-        </span>
-      </div>
+  <main class="max-w-6xl mx-auto mt-6 mb-16 px-4 space-y-6">
 
-      <div class="grid grid-cols-3 gap-3 text-[11px]">
-        <div>
-          <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
-            Avg R / Trade
-          </div>
-          <div id="stat_avg_r" class="text-sm text-zinc-100">
-            —
-          </div>
-        </div>
-
-        <div>
-          <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
-            FOMO Sessions
-          </div>
-          <div id="stat_fomo_rate" class="text-sm text-zinc-100">
-            —
-          </div>
-          <div id="stat_fomo_r" class="text-[10px] text-zinc-500">
-            —
-          </div>
-        </div>
-
-        <div>
-          <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
-            Top Strategy (R)
-          </div>
-          <div id="stat_top_strategy" class="text-sm text-zinc-100">
-            —
-          </div>
-          <div id="stat_top_strategy_r" class="text-[10px] text-zinc-500">
-            —
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Session List -->
-  <section class="max-w-5xl mx-auto mt-6 mb-4 px-4">
-    <div class="flex items-center justify-between mb-2">
-      <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
-        Sessions
-      </h2>
-      <div class="flex gap-2 text-[11px]">
-        <select id="filter_fomo" class="bg-transparent border border-zinc-700/80 rounded-full px-2 py-1 text-zinc-200">
-          <option value="">FOMO Filter</option>
-          <option value="with">With FOMO</option>
-          <option value="without">Without FOMO</option>
-        </select>
-        <select id="filter_strategy" class="bg-transparent border border-zinc-700/80 rounded-full px-2 py-1 text-zinc-200">
-          <option value="">All Strategies</option>
-          <option value="iron_condor">Iron Condor</option>
-          <option value="momentum">Momentum</option>
-          <option value="mean_reversion">Mean Reversion</option>
-          <option value="trend_follow">Trend Follow</option>
-        </select>
-      </div>
-    </div>
-    <div id="session_list" class="space-y-2 text-[11px]">
-      <!-- populated by JS -->
-    </div>
-  </section>
-
-  <!-- Ledgered Trading Journal -->
-  <section class="max-w-5xl mx-auto mt-6 mb-16 px-4">
-
-    <!-- Ledger strip -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="inline-flex rounded-full bg-[#050509] border border-zinc-800/80 p-1 shadow-[0_0_0_1px_rgba(15,23,42,0.9),0_18px_40px_rgba(0,0,0,0.9)]">
-        <button
-          type="button"
-          data-ledger="psychology"
-          class="ledger-tab active-ledger inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-black"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-black/70"></span>
-          Psychology
-        </button>
-
-        <button
-          type="button"
-          data-ledger="trade"
-          class="ledger-tab inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-zinc-700"></span>
-          Trade
-        </button>
-
-        <button
-          type="button"
-          data-ledger="market"
-          class="ledger-tab inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-zinc-700"></span>
-          Market Tape
-        </button>
-      </div>
-
-      <div class="text-right text-[11px] text-zinc-500">
-        <div class="uppercase tracking-[0.18em]">Session</div>
-        <div class="mt-0.5 text-xs text-zinc-300" id="session_date_display">—</div>
-      </div>
-    </div>
-
-    <!-- Ledger content -->
-    <div class="space-y-0">
-
-      <!-- PSYCHOLOGY LEDGER -->
-      <section id="ledger-psychology" class="ledger-panel">
-        <header class="mb-4">
-          <p class="text-[11px] uppercase tracking-[0.22em] text-emerald-400/90 mb-1">
-            Psychology Ledger
-          </p>
-          <h2 class="text-lg font-semibold text-zinc-50">
-            How are you showing up to the tape today?
+    <!-- Top row: analytics + sessions wrapped in one card -->
+    <section class="rounded-2xl border border-zinc-800/80 bg-black/40 px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+      <!-- Session Analytics -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
+            Last 30 Sessions · Snapshot
           </h2>
-          <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
-            This book is about your internal state: energy, emotions, and risk tolerance.
-          </p>
-        </header>
-
-        <!-- Mind State Tags BEFORE -->
-        <div class="mb-4" data-scope="psych-before">
-          <p class="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90 mb-1">
-            Mind State Tags · Before
-          </p>
-          <div class="flex flex-wrap gap-2 text-[11px]">
-            <button class="tag-pill" data-tag="calm">Calm</button>
-            <button class="tag-pill" data-tag="focused">Focused</button>
-            <button class="tag-pill" data-tag="confident">Confident</button>
-            <button class="tag-pill" data-tag="uncertain">Uncertain</button>
-            <button class="tag-pill" data-tag="anxious">Anxious</button>
-            <button class="tag-pill" data-tag="fear">Fear</button>
-            <button class="tag-pill" data-tag="fomo">FOMO</button>
-            <button class="tag-pill" data-tag="greed">Greed</button>
-            <button class="tag-pill" data-tag="revenge">Revenge Trading</button>
-            <button class="tag-pill" data-tag="tilt">Tilt</button>
-            <button class="tag-pill" data-tag="boredom">Boredom</button>
-            <button class="tag-pill" data-tag="overconfidence">Overconfidence</button>
-            <button class="tag-pill" data-tag="hesitation">Hesitation</button>
-            <button class="tag-pill" data-tag="impatience">Impatience</button>
-            <button class="tag-pill" data-tag="disciplined">Disciplined</button>
-            <button class="tag-pill" data-tag="distracted">Distracted</button>
-            <button class="tag-pill" data-tag="burnout">Burnout</button>
-          </div>
+          <span id="analytics_updated" class="text-[10px] text-zinc-500">
+            Loading…
+          </span>
         </div>
 
-        <!-- Before-trade -->
-        <div class="mb-6 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
-          <div class="mb-2 flex items-center justify-between">
-            <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em]">
-              <span class="h-1.5 w-6 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)]"></span>
-              <span class="text-emerald-300">
-                Reason: State before risk
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]">
+          <div>
+            <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
+              Avg R / Trade
+            </div>
+            <div id="stat_avg_r" class="text-sm text-zinc-100">
+              —
+            </div>
+          </div>
+
+          <div>
+            <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
+              FOMO Sessions
+            </div>
+            <div id="stat_fomo_rate" class="text-sm text-zinc-100">
+              —
+            </div>
+            <div id="stat_fomo_r" class="text-[10px] text-zinc-500">
+              —
+            </div>
+          </div>
+
+          <div>
+            <div class="uppercase tracking-[0.18em] text-zinc-500 mb-1">
+              Top Strategy (R)
+            </div>
+            <div id="stat_top_strategy" class="text-sm text-zinc-100">
+              —
+            </div>
+            <div id="stat_top_strategy_r" class="text-[10px] text-zinc-500">
+              —
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session List -->
+      <div class="border-t border-zinc-800/70 pt-4 mt-2">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
+            Sessions
+          </h2>
+          <div class="flex gap-2 text-[11px]">
+            <select id="filter_fomo" class="bg-transparent border border-zinc-700/80 rounded-full px-2 py-1 text-zinc-200">
+              <option value="">FOMO Filter</option>
+              <option value="with">With FOMO</option>
+              <option value="without">Without FOMO</option>
+            </select>
+            <select id="filter_strategy" class="bg-transparent border border-zinc-700/80 rounded-full px-2 py-1 text-zinc-200">
+              <option value="">All Strategies</option>
+              <option value="iron_condor">Iron Condor</option>
+              <option value="momentum">Momentum</option>
+              <option value="mean_reversion">Mean Reversion</option>
+              <option value="trend_follow">Trend Follow</option>
+            </select>
+          </div>
+        </div>
+        <div id="session_list" class="space-y-2 text-[11px]">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Ledgered Trading Journal -->
+    <section class="rounded-2xl border border-zinc-800/80 bg-black/40 px-4 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+
+      <!-- Ledger strip -->
+      <div class="flex items-center justify-between mb-6">
+        <div class="inline-flex rounded-full bg-[#050509] border border-zinc-800/80 p-1 shadow-[0_0_0_1px_rgba(15,23,42,0.9),0_18px_40px_rgba(0,0,0,0.9)]">
+          <button
+            type="button"
+            data-ledger="psychology"
+            class="ledger-tab active-ledger inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-black"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-black/70"></span>
+            Psychology
+          </button>
+
+          <button
+            type="button"
+            data-ledger="trade"
+            class="ledger-tab inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-zinc-700"></span>
+            Trade
+          </button>
+
+          <button
+            type="button"
+            data-ledger="market"
+            class="ledger-tab inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-medium tracking-[0.16em] uppercase text-zinc-400"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-zinc-700"></span>
+            Market Tape
+          </button>
+        </div>
+
+        <div class="text-right text-[11px] text-zinc-500">
+          <div class="uppercase tracking-[0.18em]">Session</div>
+          <div class="mt-0.5 text-xs text-zinc-300" id="session_date_display">—</div>
+        </div>
+      </div>
+
+      <!-- Ledger content -->
+      <div class="space-y-0">
+
+        <!-- PSYCHOLOGY LEDGER -->
+        <section id="ledger-psychology" class="ledger-panel">
+          <header class="mb-4">
+            <p class="text-[11px] uppercase tracking-[0.22em] text-emerald-400/90 mb-1">
+              Psychology Ledger
+            </p>
+            <h2 class="text-lg font-semibold text-zinc-50">
+              How are you showing up to the tape today?
+            </h2>
+            <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
+              This book is about your internal state: energy, emotions, and risk tolerance.
+            </p>
+          </header>
+
+          <!-- Mind State Tags BEFORE -->
+          <div class="mb-4" data-scope="psych-before">
+            <p class="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90 mb-1">
+              Mind State Tags · Before
+            </p>
+            <div class="flex flex-wrap gap-2 text-[11px]">
+              <button class="tag-pill" data-tag="calm">Calm</button>
+              <button class="tag-pill" data-tag="focused">Focused</button>
+              <button class="tag-pill" data-tag="confident">Confident</button>
+              <button class="tag-pill" data-tag="uncertain">Uncertain</button>
+              <button class="tag-pill" data-tag="anxious">Anxious</button>
+              <button class="tag-pill" data-tag="fear">Fear</button>
+              <button class="tag-pill" data-tag="fomo">FOMO</button>
+              <button class="tag-pill" data-tag="greed">Greed</button>
+              <button class="tag-pill" data-tag="revenge">Revenge Trading</button>
+              <button class="tag-pill" data-tag="tilt">Tilt</button>
+              <button class="tag-pill" data-tag="boredom">Boredom</button>
+              <button class="tag-pill" data-tag="overconfidence">Overconfidence</button>
+              <button class="tag-pill" data-tag="hesitation">Hesitation</button>
+              <button class="tag-pill" data-tag="impatience">Impatience</button>
+              <button class="tag-pill" data-tag="disciplined">Disciplined</button>
+              <button class="tag-pill" data-tag="distracted">Distracted</button>
+              <button class="tag-pill" data-tag="burnout">Burnout</button>
+            </div>
+          </div>
+
+          <!-- Before-trade -->
+          <div class="mb-6 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em]">
+                <span class="h-1.5 w-6 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)]"></span>
+                <span class="text-emerald-300">
+                  Reason: State before risk
+                </span>
+              </div>
+              <span class="text-[10px] text-zinc-500">
+                2–5 sentences · honest, not polished
               </span>
             </div>
-            <span class="text-[10px] text-zinc-500">
-              2–5 sentences · honest, not polished
-            </span>
-          </div>
-          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
-            Before-Trade Check-In
-          </h3>
-          <textarea
-            id="psych_before"
-            rows="6"
-            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
-            placeholder="Example: Slept 5.5h, slight frustration from yesterday. Notice urge to push size if first trade works."
-          ></textarea>
-        </div>
-
-        <!-- Mind State Tags AFTER -->
-        <div class="mb-4" data-scope="psych-after">
-          <p class="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90 mb-1">
-            Mind State Tags · After
-          </p>
-          <div class="flex flex-wrap gap-2 text-[11px]">
-            <button class="tag-pill" data-tag="calm">Calm</button>
-            <button class="tag-pill" data-tag="tired">Tired</button>
-            <button class="tag-pill" data-tag="disciplined">Disciplined</button>
-            <button class="tag-pill" data-tag="regret">Regret</button>
-            <button class="tag-pill" data-tag="relief">Relief</button>
-            <button class="tag-pill" data-tag="tilt">Tilt</button>
-            <button class="tag-pill" data-tag="burnout">Burnout</button>
-            <button class="tag-pill" data-tag="satisfied">Satisfied</button>
-          </div>
-        </div>
-
-        <!-- After-trade -->
-        <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
-          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
-            After-Trade Decompression
-          </h3>
-          <textarea
-            id="psych_after"
-            rows="6"
-            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
-            placeholder="Example: Took 3 trades, followed plan on entries. Tilt tried to show up after second loss but size stayed standard."
-          ></textarea>
-        </div>
-      </section>
-
-      <!-- TRADE LEDGER -->
-      <section id="ledger-trade" class="ledger-panel hidden">
-        <header class="mb-4">
-          <p class="text-[11px] uppercase tracking-[0.22em] text-sky-400/90 mb-1">
-            Trade Ledger
-          </p>
-          <h2 class="text-lg font-semibold text-zinc-50">
-            Structure and execution of the actual trades.
-          </h2>
-          <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
-            This book is about what you actually put on: strategy, structure, sizing, execution.
-          </p>
-        </header>
-
-        <!-- Time Horizon -->
-        <div class="mb-3" data-scope="trade-horizon">
-          <p class="text-[11px] uppercase tracking-[0.18em] text-sky-300/90 mb-1">
-            Time Horizon
-          </p>
-          <div class="flex flex-wrap gap-2 text-[11px]">
-            <button class="tag-pill" data-tag="long_term">Long-Term Investment (6m+)</button>
-            <button class="tag-pill" data-tag="swing">Swing (days–weeks)</button>
-            <button class="tag-pill" data-tag="short_term">Short-Term (1–5 days)</button>
-            <button class="tag-pill" data-tag="day_trade">Day Trade (intraday)</button>
-            <button class="tag-pill" data-tag="scalp">Scalp (minutes)</button>
-          </div>
-        </div>
-
-        <!-- Strategy & Setup -->
-        <div class="mb-4 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-3" data-scope="trade-strategy">
-          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
-            Strategy & Setup
-          </h3>
-          <div class="flex flex-wrap gap-2 text-[11px] mb-1">
-            <!-- Options structures -->
-            <button class="pill-btn" data-tag="iron_condor">Iron Condor</button>
-            <button class="pill-btn" data-tag="vertical_credit">Vertical Credit Spread</button>
-            <button class="pill-btn" data-tag="vertical_debit">Vertical Debit Spread</button>
-            <button class="pill-btn" data-tag="straddle">Straddle</button>
-            <button class="pill-btn" data-tag="strangle">Strangle</button>
-            <button class="pill-btn" data-tag="covered_call">Covered Call</button>
-            <button class="pill-btn" data-tag="cash_secured_put">Cash-Secured Put</button>
-
-            <!-- Directional styles -->
-            <button class="pill-btn" data-tag="momentum">Momentum</button>
-            <button class="pill-btn" data-tag="mean_reversion">Mean Reversion</button>
-            <button class="pill-btn" data-tag="breakout">Breakout</button>
-            <button class="pill-btn" data-tag="breakdown">Breakdown</button>
-            <button class="pill-btn" data-tag="range_trade">Range Trade</button>
-            <button class="pill-btn" data-tag="trend_follow">Trend Follow</button>
-
-            <!-- Context -->
-            <button class="pill-btn" data-tag="event_driven">Event-Driven</button>
-            <button class="pill-btn" data-tag="hedge">Hedge / Protection</button>
-            <button class="pill-btn" data-tag="liquidity_probe">Liquidity Probe</button>
-          </div>
-        </div>
-
-        <!-- Global trade plan -->
-        <div class="mb-4 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
-          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
-            Global Plan for This Session
-          </h3>
-          <textarea
-            id="trade_global_plan"
-            rows="4"
-            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
-            placeholder="Example: Focus on 0DTE SPX iron condors around key levels, no more than 3 trades, no size escalation after wins."
-          ></textarea>
-        </div>
-
-        <!-- Trade narrative (single trade for now) -->
-        <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
-          <div class="mb-2 flex items-center justify-between">
-            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
-              Trade Narrative (First Trade)
+            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+              Before-Trade Check-In
             </h3>
-            <div class="flex items-center gap-2 text-[11px]">
-              <span class="text-zinc-500 uppercase tracking-[0.16em]">Mode</span>
-              <select
-                id="trade_mode"
-                class="focus-text bg-transparent border border-zinc-700/80 rounded-full px-3 py-1 text-[11px] text-zinc-200 outline-none"
-              >
-                <option value="plan" class="bg-[#050509]">Plan</option>
-                <option value="live" class="bg-[#050509]">Live Notes</option>
-                <option value="postmortem" class="bg-[#050509]">Post-Mortem</option>
-              </select>
-            </div>
-          </div>
-          <textarea
-            id="trade_narrative"
-            rows="9"
-            class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
-            placeholder="If in Plan: What are you trying to express, where is invalidation, what must be true? If Post-Mortem: What actually happened, what broke, what will you change?"
-          ></textarea>
-        </div>
-      </section>
-
-      <!-- MARKET LEDGER -->
-      <section id="ledger-market" class="ledger-panel hidden">
-        <header class="mb-4">
-          <p class="text-[11px] uppercase tracking-[0.22em] text-amber-400/90 mb-1">
-            Market Ledger
-          </p>
-          <h2 class="text-lg font-semibold text-zinc-50">
-            What the tape, news, and levels are telling you.
-          </h2>
-          <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
-            AI summarizes the environment; you mark what you actually saw.
-          </p>
-        </header>
-
-        <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
-          <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-3">
-            AI Market Summary · Select What You Actually Saw
-          </h3>
-
-          <!-- Open -->
-          <div class="mb-4 pb-4 border-b border-zinc-800/80" data-scope="market-open">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
-                Open
-              </span>
-              <span class="text-[10px] text-zinc-500">
-                Generated · 09:35 ET
-              </span>
-            </div>
-            <p id="ai_open" class="text-xs text-zinc-300/90 mb-2">
-              Futures opened +0.4% on strong tech, breadth positive across S&P sectors, VIX lower, no major macro releases.
-            </p>
-            <div class="flex flex-wrap gap-2 text-[11px] mb-2">
-              <button class="tag-pill" data-tag="noticed">I noticed this</button>
-              <button class="tag-pill" data-tag="missed">I did not notice this</button>
-              <button class="tag-pill" data-tag="surprised">This surprised me</button>
-            </div>
             <textarea
-              id="market_open_note"
-              rows="2"
-              class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
-              placeholder="Optional: How did the open feel from your seat?"
+              id="psych_before"
+              rows="6"
+              class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+              placeholder="Example: Slept 5.5h, slight frustration from yesterday. Notice urge to push size if first trade works."
             ></textarea>
           </div>
 
-          <!-- Midday -->
-          <div class="mb-4 pb-4 border-b border-zinc-800/80" data-scope="market-midday">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
-                Midday
-              </span>
-              <span class="text-[10px] text-zinc-500">
-                Generated · 12:15 ET
-              </span>
-            </div>
-            <p id="ai_midday" class="text-xs text-zinc-300/90 mb-2">
-              Indices consolidated near highs with declining intraday volume, financials lagging, mega-cap tech leading.
+          <!-- Mind State Tags AFTER -->
+          <div class="mb-4" data-scope="psych-after">
+            <p class="text-[11px] uppercase tracking-[0.18em] text-emerald-300/90 mb-1">
+              Mind State Tags · After
             </p>
-            <div class="flex flex-wrap gap-2 text-[11px] mb-2">
-              <button class="tag-pill" data-tag="noticed">I noticed this</button>
-              <button class="tag-pill" data-tag="missed">I did not notice this</button>
-              <button class="tag-pill" data-tag="surprised">This surprised me</button>
+            <div class="flex flex-wrap gap-2 text-[11px]">
+              <button class="tag-pill" data-tag="calm">Calm</button>
+              <button class="tag-pill" data-tag="tired">Tired</button>
+              <button class="tag-pill" data-tag="disciplined">Disciplined</button>
+              <button class="tag-pill" data-tag="regret">Regret</button>
+              <button class="tag-pill" data-tag="relief">Relief</button>
+              <button class="tag-pill" data-tag="tilt">Tilt</button>
+              <button class="tag-pill" data-tag="burnout">Burnout</button>
+              <button class="tag-pill" data-tag="satisfied">Satisfied</button>
             </div>
+          </div>
+
+          <!-- After-trade -->
+          <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+              After-Trade Decompression
+            </h3>
             <textarea
-              id="market_midday_note"
-              rows="2"
-              class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
-              placeholder="Optional: Did the midday drift change your plan?"
+              id="psych_after"
+              rows="6"
+              class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+              placeholder="Example: Took 3 trades, followed plan on entries. Tilt tried to show up after second loss but size stayed standard."
+            ></textarea>
+          </div>
+        </section>
+
+        <!-- TRADE LEDGER -->
+        <section id="ledger-trade" class="ledger-panel hidden">
+          <header class="mb-4">
+            <p class="text-[11px] uppercase tracking-[0.22em] text-sky-400/90 mb-1">
+              Trade Ledger
+            </p>
+            <h2 class="text-lg font-semibold text-zinc-50">
+              Structure and execution of the actual trades.
+            </h2>
+            <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
+              This book is about what you actually put on: strategy, structure, sizing, execution.
+            </p>
+          </header>
+
+          <!-- Time Horizon -->
+          <div class="mb-3" data-scope="trade-horizon">
+            <p class="text-[11px] uppercase tracking-[0.18em] text-sky-300/90 mb-1">
+              Time Horizon
+            </p>
+            <div class="flex flex-wrap gap-2 text-[11px]">
+              <button class="tag-pill" data-tag="long_term">Long-Term Investment (6m+)</button>
+              <button class="tag-pill" data-tag="swing">Swing (days–weeks)</button>
+              <button class="tag-pill" data-tag="short_term">Short-Term (1–5 days)</button>
+              <button class="tag-pill" data-tag="day_trade">Day Trade (intraday)</button>
+              <button class="tag-pill" data-tag="scalp">Scalp (minutes)</button>
+            </div>
+          </div>
+
+          <!-- Strategy & Setup -->
+          <div class="mb-4 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-3" data-scope="trade-strategy">
+            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+              Strategy & Setup
+            </h3>
+            <div class="flex flex-wrap gap-2 text-[11px] mb-1">
+              <!-- Options structures -->
+              <button class="pill-btn" data-tag="iron_condor">Iron Condor</button>
+              <button class="pill-btn" data-tag="vertical_credit">Vertical Credit Spread</button>
+              <button class="pill-btn" data-tag="vertical_debit">Vertical Debit Spread</button>
+              <button class="pill-btn" data-tag="straddle">Straddle</button>
+              <button class="pill-btn" data-tag="strangle">Strangle</button>
+              <button class="pill-btn" data-tag="covered_call">Covered Call</button>
+              <button class="pill-btn" data-tag="cash_secured_put">Cash-Secured Put</button>
+
+              <!-- Directional styles -->
+              <button class="pill-btn" data-tag="momentum">Momentum</button>
+              <button class="pill-btn" data-tag="mean_reversion">Mean Reversion</button>
+              <button class="pill-btn" data-tag="breakout">Breakout</button>
+              <button class="pill-btn" data-tag="breakdown">Breakdown</button>
+              <button class="pill-btn" data-tag="range_trade">Range Trade</button>
+              <button class="pill-btn" data-tag="trend_follow">Trend Follow</button>
+
+              <!-- Context -->
+              <button class="pill-btn" data-tag="event_driven">Event-Driven</button>
+              <button class="pill-btn" data-tag="hedge">Hedge / Protection</button>
+              <button class="pill-btn" data-tag="liquidity_probe">Liquidity Probe</button>
+            </div>
+          </div>
+
+          <!-- Global trade plan -->
+          <div class="mb-4 rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-2">
+              Global Plan for This Session
+            </h3>
+            <textarea
+              id="trade_global_plan"
+              rows="4"
+              class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+              placeholder="Example: Focus on 0DTE SPX iron condors around key levels, no more than 3 trades, no size escalation after wins."
             ></textarea>
           </div>
 
-          <!-- Close -->
-          <div data-scope="market-close">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
-                Close
-              </span>
-              <span class="text-[10px] text-zinc-500">
-                Generated · 16:05 ET
-              </span>
-            </div>
-            <p id="ai_close" class="text-xs text-zinc-300/90 mb-2">
-              Market closed near session highs with strong breadth, small caps catching up into the close, IV at lows.
-            </p>
-            <div class="flex flex-wrap gap-2 text-[11px] mb-2">
-              <button class="tag-pill" data-tag="noticed">I noticed this</button>
-              <button class="tag-pill" data-tag="missed">I did not notice this</button>
-              <button class="tag-pill" data-tag="surprised">This surprised me</button>
+          <!-- Trade narrative (single trade for now) -->
+          <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+            <div class="mb-2 flex items-center justify-between">
+              <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
+                Trade Narrative (First Trade)
+              </h3>
+              <div class="flex items-center gap-2 text-[11px]">
+                <span class="text-zinc-500 uppercase tracking-[0.16em]">Mode</span>
+                <select
+                  id="trade_mode"
+                  class="focus-text bg-transparent border border-zinc-700/80 rounded-full px-3 py-1 text-[11px] text-zinc-200 outline-none"
+                >
+                  <option value="plan" class="bg-[#050509]">Plan</option>
+                  <option value="live" class="bg-[#050509]">Live Notes</option>
+                  <option value="postmortem" class="bg-[#050509]">Post-Mortem</option>
+                </select>
+              </div>
             </div>
             <textarea
-              id="market_close_note"
-              rows="2"
-              class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
-              placeholder="Optional: How did you interpret the close?"
+              id="trade_narrative"
+              rows="9"
+              class="focus-text block w-full bg-transparent border-0 outline-none ring-0 resize-none text-[0.93rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80"
+              placeholder="If in Plan: What are you trying to express, where is invalidation, what must be true? If Post-Mortem: What actually happened, what broke, what will you change?"
             ></textarea>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
 
-    <!-- Save footer -->
-    <footer class="mt-8 flex items-center justify-between">
-      <span id="save_status" class="text-[11px] text-zinc-500">
-        Not saved
-      </span>
-      <button
-        id="save_session_btn"
-        class="px-6 py-2 rounded-full bg-emerald-400 text-black text-[11px] font-semibold uppercase tracking-[0.18em] hover:bg-emerald-300 transition-colors duration-150"
-      >
-        Save Session
-      </button>
-    </footer>
-  </section>
+        <!-- MARKET LEDGER -->
+        <section id="ledger-market" class="ledger-panel hidden">
+          <header class="mb-4">
+            <p class="text-[11px] uppercase tracking-[0.22em] text-amber-400/90 mb-1">
+              Market Ledger
+            </p>
+            <h2 class="text-lg font-semibold text-zinc-50">
+              What the tape, news, and levels are telling you.
+            </h2>
+            <p class="mt-2 text-xs text-zinc-400 max-w-2xl">
+              AI summarizes the environment; you mark what you actually saw.
+            </p>
+          </header>
+
+          <div class="rounded-2xl border border-zinc-800/80 bg-[#050509] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.85)]">
+            <h3 class="text-[11px] uppercase tracking-[0.2em] text-zinc-400 mb-3">
+              AI Market Summary · Select What You Actually Saw
+            </h3>
+
+            <!-- Open -->
+            <div class="mb-4 pb-4 border-b border-zinc-800/80" data-scope="market-open">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
+                  Open
+                </span>
+                <span class="text-[10px] text-zinc-500">
+                  Generated · 09:35 ET
+                </span>
+              </div>
+              <p id="ai_open" class="text-xs text-zinc-300/90 mb-2">
+                Futures opened +0.4% on strong tech, breadth positive across S&P sectors, VIX lower, no major macro releases.
+              </p>
+              <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+                <button class="tag-pill" data-tag="noticed">I noticed this</button>
+                <button class="tag-pill" data-tag="missed">I did not notice this</button>
+                <button class="tag-pill" data-tag="surprised">This surprised me</button>
+              </div>
+              <textarea
+                id="market_open_note"
+                rows="2"
+                class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
+                placeholder="Optional: How did the open feel from your seat?"
+              ></textarea>
+            </div>
+
+            <!-- Midday -->
+            <div class="mb-4 pb-4 border-b border-zinc-800/80" data-scope="market-midday">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
+                  Midday
+                </span>
+                <span class="text-[10px] text-zinc-500">
+                  Generated · 12:15 ET
+                </span>
+              </div>
+              <p id="ai_midday" class="text-xs text-zinc-300/90 mb-2">
+                Indices consolidated near highs with declining intraday volume, financials lagging, mega-cap tech leading.
+              </p>
+              <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+                <button class="tag-pill" data-tag="noticed">I noticed this</button>
+                <button class="tag-pill" data-tag="missed">I did not notice this</button>
+                <button class="tag-pill" data-tag="surprised">This surprised me</button>
+              </div>
+              <textarea
+                id="market_midday_note"
+                rows="2"
+                class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
+                placeholder="Optional: Did the midday drift change your plan?"
+              ></textarea>
+            </div>
+
+            <!-- Close -->
+            <div data-scope="market-close">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] uppercase tracking-[0.18em] text-amber-300/90">
+                  Close
+                </span>
+                <span class="text-[10px] text-zinc-500">
+                  Generated · 16:05 ET
+                </span>
+              </div>
+              <p id="ai_close" class="text-xs text-zinc-300/90 mb-2">
+                Market closed near session highs with strong breadth, small caps catching up into the close, IV at lows.
+              </p>
+              <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+                <button class="tag-pill" data-tag="noticed">I noticed this</button>
+                <button class="tag-pill" data-tag="missed">I did not notice this</button>
+                <button class="tag-pill" data-tag="surprised">This surprised me</button>
+              </div>
+              <textarea
+                id="market_close_note"
+                rows="2"
+                class="focus-text block w-full bg-transparent border border-zinc-800/80 rounded-xl outline-none ring-0 resize-none text-[0.85rem] leading-relaxed text-zinc-100 placeholder:text-zinc-600/80 px-2 py-1.5"
+                placeholder="Optional: How did you interpret the close?"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Save footer -->
+      <footer class="mt-6 flex items-center justify-between border-t border-zinc-800/80 pt-3">
+        <span id="save_status" class="text-[11px] text-zinc-500">
+          Idle
+        </span>
+        <button
+          id="save_session_btn"
+          class="px-6 py-2 rounded-full bg-emerald-400 text-black text-[11px] font-semibold uppercase tracking-[0.18em] hover:bg-emerald-300 transition-colors duration-150"
+        >
+          Save Session
+        </button>
+      </footer>
+    </section>
+  </main>
 
   <script>
-  const API_BASE = "";
+    const API_BASE = "";
     const TRADER_ID = "user_123";
 
     // Ledger tab switching
@@ -654,7 +675,10 @@
         if (!res.ok) throw new Error("Failed");
         const saved = await res.json();
         document.getElementById("session_id").value = saved.session_id;
-        status.textContent = "Saved";
+        status.textContent = "Saved · synced to cloud";
+        setTimeout(() => {
+          status.textContent = "Idle";
+        }, 2000);
         await refreshSessions();
         await refreshAnalytics();
       } catch (e) {
