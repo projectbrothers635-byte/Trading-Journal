@@ -29,6 +29,45 @@ app.get("/journal/session/:session_id", (req: Request, res: Response) => {
   }
   res.json(session);
 });
+app.post("/journal/session", (req: Request, res: Response) => {
+  const body = req.body as JournalSession;
+
+  if (!body.session_id || !body.trader_id || !body.date) {
+    return res
+      .status(400)
+      .json({ error: "session_id, trader_id, date are required" });
+  }
+
+  // Optionally add quick summaries for immediate UI display
+  const psych = body.psychology_ledger || {};
+  const trade = body.trade_ledger || {};
+
+  const psychSummary =
+    psych.before_trade_note?.slice(0, 120) ||
+    psych.after_trade_note?.slice(0, 120) ||
+    "No psychology note yet";
+
+  const firstTrade = (trade.trades || [])[0];
+  const tradeSummary =
+    firstTrade?.plan_note?.slice(0, 120) ||
+    trade.global_plan_note?.slice(0, 120) ||
+    "No trade note yet";
+
+  const enriched: JournalSession = {
+    ...body,
+    psychology_ledger: {
+      ...psych,
+      summary_line: psychSummary
+    },
+    trade_ledger: {
+      ...trade,
+      summary_line: tradeSummary
+    }
+  };
+
+  const saved = upsertSession(enriched);
+  return res.json(saved);
+});
 
 app.get("/journal/sessions", (req: Request, res: Response) => {
   const traderId =
