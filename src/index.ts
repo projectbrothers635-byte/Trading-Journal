@@ -6,13 +6,16 @@ import { upsertSession, getSession, listSessions } from "./store";
 
 const app = express();
 app.use(cors());
-app.use(express.static("public"));pp.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.static("public"));
 
 app.post("/journal/session", (req: Request, res: Response) => {
   const body = req.body as JournalSession;
 
   if (!body.session_id || !body.trader_id || !body.date) {
-    return res.status(400).json({ error: "session_id, trader_id, date are required" });
+    return res
+      .status(400)
+      .json({ error: "session_id, trader_id, date are required" });
   }
 
   const saved = upsertSession(body);
